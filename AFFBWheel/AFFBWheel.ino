@@ -107,6 +107,14 @@ uint8_t debounceCount=0;
   MCP23017_BBI2C mcp23017_2;
 #endif
 
+#ifdef LED_MCP23017
+  #include "bb_i2c.h"
+  MCP23017_BBI2C mcp23017_led;	// индикация 16 светодиодов
+  int32_t ledTime=0;			// таймер для индикации
+  bool ledBlink=false;          // признак моргания светодиодами
+#endif
+
+
 #if BUTTONS_TYPE == BT_PCF857x
   #include "bb_i2c.h"
 
@@ -291,6 +299,11 @@ void setup() {
     mcp23017_1.begin(MCP23017_ADDR1);
     mcp23017_2.begin(MCP23017_ADDR2);
   #endif
+  
+  #ifdef LED_MCP23017
+    mcp23017_led.begin(MCP23017_ADDRLED);
+    mcp23017_led.writeRegister16(0,0); //включим режим output на всех пинах
+  #endif
 
 
   #if BUTTONS_TYPE == BT_PCF857x
@@ -395,6 +408,30 @@ void mainLoop() {
          timerInfo=millis();
       }
   }
+  
+  
+  #ifdef LED_MCP23017
+  uint16_t led=0;
+  if (ledTime==0||(millis()-ledTime>150))
+  {	  
+    ledTime=millis();
+    if (wheel.analogAxes[AXIS_BRAKE]->value>(wheel.analogAxes[AXIS_BRAKE]->axisMin+10))  // нажат тормоз, моргаем 16 светодиодом
+    {
+      ledBlink=!ledBlink;
+      if (ledBlink) led|=(1<<15);
+    }
+    led|=(1<<byte(ceil(wheel.axisWheel->value/(wheel.axisWheel->axisMax/7))+8));	// положение руля. светодиоды 8-15
+    if (wheel.analogAxes[AXIS_ACC]->value>=(wheel.analogAxes[AXIS_ACC]->axisMax-10)) // если педаль газа "в пол" моргаем всеми 8 светодиодами
+    {
+      ledBlink=!ledBlink;
+      if (ledBlink) for (int i=0;i<8;i++) led|=(1<<byte(i));
+    }
+    else if (wheel.analogAxes[AXIS_ACC]->value>10) led|=(1<<byte(ceil(wheel.analogAxes[AXIS_ACC]->value/(wheel.analogAxes[AXIS_ACC]->axisMax-wheel.analogAxes[AXIS_ACC]->axisMin/8)))); // иначе положение педали газа светодиоды 1-8
+    //for(int i=0;i<16;i++) Serial.print(bitRead(led,15-i));
+    //Serial.println();
+    mcp23017_led.writeRegister16(MCP23017_RGPIOA,led); //отправляем значение
+  }
+  #endif
   
   processSerial();
 }

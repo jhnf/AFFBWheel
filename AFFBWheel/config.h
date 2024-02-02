@@ -19,6 +19,8 @@
 #define BT_NONE         0xFF
 //-----------------------------------------------------------------------
 
+#define LED_MCP23017 // включить индикацию на MCP23017
+
 //---------------------------Configuration-------------------------------
 
 #define SERIAL_BAUDRATE 2000000
@@ -158,8 +160,11 @@
 #define CD4021_PIN_PL      3          //pin for PL (comment this line if using RC to omit PL line)
 
 //settings for MCP23017
-#define MCP23017_ADDR1  0x20
-#define MCP23017_ADDR2  0x21
+#define MCP23017_ADDR1  0x20    // A2-GND A1-GND A0-GND
+#define MCP23017_ADDR2  0x21    // A2-GND A1-GND A0-VCC
+#ifdef LED_MCP23017
+  #define MCP23017_ADDRLED  0x22  // A2-GND A1-VCC A0-GND
+#endif
 
 //settings for PCF857x
 #define PCF857x_L1_TYPE   PCF8575
